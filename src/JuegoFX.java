@@ -149,6 +149,9 @@ public class JuegoFX extends Application {
     private void manejarClicColumna(int col) {
         if (juego.isJuegoTerminado()) return;
 
+        // Quitar resaltado de pista si existe
+        quitarResaltadoPista();
+
         if (tipoSeleccionado == null) {
             // Seleccionar carta de columna
             if (juego.getColumnas()[col].obtenerFin() != null) {
@@ -178,6 +181,9 @@ public class JuegoFX extends Application {
 
     private void manejarClicReserva(int reserva) {
         if (juego.isJuegoTerminado()) return;
+
+        // Quitar resaltado de pista si existe
+        quitarResaltadoPista();
 
         if (tipoSeleccionado == null) {
             // Seleccionar carta de reserva
@@ -212,7 +218,12 @@ public class JuegoFX extends Application {
     }
 
     private void manejarClicFundacion(int fundacion) {
-        if (juego.isJuegoTerminado() || tipoSeleccionado == null) return;
+        if (juego.isJuegoTerminado()) return;
+
+        // Quitar resaltado de pista si existe
+        quitarResaltadoPista();
+
+        if (tipoSeleccionado == null) return;
 
         boolean exito = false;
         if (tipoSeleccionado == OrigenTipo.COLUMNA) {
@@ -246,27 +257,82 @@ public class JuegoFX extends Application {
 
         switch (pista.type) {
             case COL_COL:
-                mensaje = "Mover de columna " + (pista.origen + 1) + " a columna " + (pista.destino + 1);
+                //mensaje = "Mover de columna " + (pista.origen + 1) + " a columna " + (pista.destino + 1);
+                resaltarPistaColumna(pista.origen);
+                resaltarPistaColumna(pista.destino);
                 break;
             case COL_CEL:
-                mensaje = "Mover de columna " + (pista.origen + 1) + " a reserva " + (pista.destino + 1);
+                //mensaje = "Mover de columna " + (pista.origen + 1) + " a reserva " + (pista.destino + 1);
+                resaltarPistaColumna(pista.origen);
+                resaltarPistaReserva(pista.destino);
                 break;
             case CEL_COL:
-                mensaje = "Mover de reserva " + (pista.origen + 1) + " a columna " + (pista.destino + 1);
+                //mensaje = "Mover de reserva " + (pista.origen + 1) + " a columna " + (pista.destino + 1);
+                resaltarPistaReserva(pista.origen);
+                resaltarPistaColumna(pista.destino);
                 break;
             case COL_FND:
-                mensaje = "Mover de columna " + (pista.origen + 1) + " a fundación " + (pista.destino + 1);
+                //mensaje = "Mover de columna " + (pista.origen + 1) + " a fundación " + (pista.destino + 1);
+                resaltarPistaColumna(pista.origen);
+                resaltarPistaFundacion(pista.destino);
                 break;
             case CEL_FND:
-                mensaje = "Mover de reserva " + (pista.origen + 1) + " a fundación " + (pista.destino + 1);
+                //mensaje = "Mover de reserva " + (pista.origen + 1) + " a fundación " + (pista.destino + 1);
+                resaltarPistaReserva(pista.origen);
+                resaltarPistaFundacion(pista.destino);
                 break;
         }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        /*Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Pista");
         alert.setHeaderText(null);
-        alert.setContentText(mensaje);
-        alert.showAndWait();
+        alert.setContentText(mensaje);*/
+
+        // Cuando se cierra la alerta, quitar el resaltado de pista
+        //alert.setOnHidden(e -> quitarResaltadoPista());
+
+        //alert.showAndWait();
+    }
+
+    private void resaltarPistaColumna(int columna) {
+        if (columna >= 0 && columna < 8) {
+            panelesColumnas[columna].setBorder(new Border(new BorderStroke(Color.YELLOW,
+                    BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(3))));
+        }
+    }
+
+    private void resaltarPistaReserva(int reserva) {
+        if (reserva >= 0 && reserva < 8) {
+            contenedoresReservas[reserva].setBorder(new Border(new BorderStroke(Color.YELLOW,
+                    BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(3))));
+        }
+    }
+
+    private void resaltarPistaFundacion(int fundacion) {
+        if (fundacion >= 0 && fundacion < 4) {
+            contenedoresFundaciones[fundacion].setBorder(new Border(new BorderStroke(Color.YELLOW,
+                    BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(3))));
+        }
+    }
+
+    private void quitarResaltadoPista() {
+        // Quitar resaltado amarillo de todas las columnas
+        for (int i = 0; i < 8; i++) {
+            panelesColumnas[i].setBorder(new Border(new BorderStroke(Color.BLACK,
+                    BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
+        }
+
+        // Quitar resaltado amarillo de todas las reservas
+        for (int i = 0; i < 8; i++) {
+            contenedoresReservas[i].setBorder(new Border(new BorderStroke(Color.BLACK,
+                    BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
+        }
+
+        // Quitar resaltado amarillo de todas las fundaciones
+        for (int i = 0; i < 4; i++) {
+            contenedoresFundaciones[i].setBorder(new Border(new BorderStroke(Color.BLACK,
+                    BorderStrokeStyle.SOLID, new CornerRadii(5), new BorderWidths(1))));
+        }
     }
 
     private void resetSeleccion() {
@@ -409,7 +475,7 @@ public class JuegoFX extends Application {
 
             // Texto pequeño en esquina superior izquierda
             Text cornerText = new Text(getCardText());
-            double cornerFontSize = baseFontSize * 0.7; // 70% del tamaño base
+            double cornerFontSize = baseFontSize * 0.8; // 70% del tamaño base
             cornerText.setFont(Font.font("Arial", FontWeight.BOLD, cornerFontSize));
             cornerText.setFill(getTextColor());
             cornerText.setTranslateX(-CARD_WIDTH * 0.35); // Mover a la izquierda
