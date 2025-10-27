@@ -70,10 +70,10 @@ public class JuegoLogica {
         return copy;
     }
 
-    // REGLAS EIGHT OFF
+    // REGLAS EIGHT OFF MODIFICADAS
     public boolean puedeMoverEntreColumnas(Carta origen, Carta destino) {
         if (destino == null) {
-            // Permitir cualquier carta en columna vacía
+            // Columna vacía - solo se puede mover Rey (K)
             return true;
         }
         return origen.getPalo() == destino.getPalo() && origen.getValor() == destino.getValor() - 1;
@@ -131,7 +131,7 @@ public class JuegoLogica {
         return puedeMoverAFundacion(c, fundacion);
     }
 
-    // MÉTODOS PARA OBTENER MOVIMIENTOS VÁLIDOS
+    // MÉTODOS PARA OBTENER MOVIMIENTOS VÁLIDOS (para resaltar)
     public java.util.List<Integer> getColumnasValidasParaCarta(Carta carta) {
         java.util.List<Integer> columnasValidas = new java.util.ArrayList<>();
         for (int i = 0; i < 8; i++) {
@@ -163,141 +163,14 @@ public class JuegoLogica {
         return reservasLibres;
     }
 
-    // MÉTODOS DE MOVIMIENTO - VERSIÓN CORREGIDA PARA SECUENCIAS
+    // MÉTODOS DE MOVIMIENTO
     public boolean moverEntreColumnas(int origenCol, int destinoCol) {
-        if (origenCol < 0 || origenCol >= 8 || destinoCol < 0 || destinoCol >= 8) return false;
-        if (columnas[origenCol].estaVacia()) return false;
-
+        if (!canMoveEntreColumnas(origenCol, destinoCol)) return false;
         guardarEstado();
-
-        // Buscar secuencia completa del mismo palo
-        java.util.List<Carta> secuencia = obtenerSecuenciaCompleta(origenCol);
-
-        if (secuencia != null && secuencia.size() > 1) {
-            // Intentar mover la secuencia completa
-            return moverSecuenciaCompleta(origenCol, destinoCol, secuencia);
-        } else {
-            // Mover solo la carta superior
-            Carta cartaOrigen = columnas[origenCol].obtenerFin();
-            Carta cartaDestino = columnas[destinoCol].obtenerFin();
-
-            if (!puedeMoverEntreColumnas(cartaOrigen, cartaDestino)) {
-                undoStack.pop(); // Eliminar el estado guardado si el movimiento no es válido
-                return false;
-            }
-
-            Carta carta = columnas[origenCol].eliminarFin();
-            columnas[destinoCol].insertarFin(carta);
-            verificarVictoria();
-            return true;
-        }
-    }
-
-    // Método auxiliar para obtener secuencia completa del mismo palo
-    private java.util.List<Carta> obtenerSecuenciaCompleta(int columna) {
-        if (columnas[columna].estaVacia() || columnas[columna].getTamaño() < 2) {
-            return null;
-        }
-
-        // Obtener todas las cartas de la columna en orden (de abajo a arriba)
-        java.util.List<Carta> cartas = new java.util.ArrayList<>();
-        NodoDoble<Carta> actual = columnas[columna].getInicio();
-
-        // Recorrer y guardar todas las cartas
-        do {
-            cartas.add(actual.getDato());
-            actual = actual.getSig();
-        } while (actual != columnas[columna].getInicio());
-
-        // Buscar secuencia desde el FINAL (última carta) hacia el inicio
-        java.util.List<Carta> secuencia = new java.util.ArrayList<>();
-
-        // Empezar desde la última carta (la que está en el tope)
-        int ultimoIndice = cartas.size() - 1;
-        Carta.Palo paloObjetivo = cartas.get(ultimoIndice).getPalo();
-        int valorEsperado = cartas.get(ultimoIndice).getValor();
-
-        // Recorrer hacia atrás buscando secuencia continua
-        for (int i = ultimoIndice; i >= 0; i--) {
-            Carta cartaActual = cartas.get(i);
-
-            // Verificar si la carta actual es del mismo palo y forma secuencia descendente
-            if (cartaActual.getPalo() == paloObjetivo && cartaActual.getValor() == valorEsperado) {
-                secuencia.add(0, cartaActual); // Insertar al inicio para mantener orden
-                valorEsperado--;
-            } else {
-                break; // La secuencia se rompe
-            }
-        }
-
-        return secuencia.size() > 1 ? secuencia : null;
-    }
-
-    // Método auxiliar para mover secuencia completa
-    private boolean moverSecuenciaCompleta(int origenCol, int destinoCol, java.util.List<Carta> secuencia) {
-        // Verificar que la columna destino pueda recibir la secuencia
-        Carta cartaDestino = columnas[destinoCol].obtenerFin();
-        Carta primeraCartaSecuencia = secuencia.get(0);
-
-        if (cartaDestino != null) {
-            if (!puedeMoverEntreColumnas(primeraCartaSecuencia, cartaDestino)) {
-                return false;
-            }
-        }
-
-        // Eliminar las cartas de la secuencia de la columna origen
-        for (Carta carta : secuencia) {
-            eliminarCartaEspecifica(origenCol, carta);
-        }
-
-        // Insertar la secuencia en la columna destino (en orden correcto)
-        for (Carta carta : secuencia) {
-            columnas[destinoCol].insertarFin(carta);
-        }
-
+        Carta carta = columnas[origenCol].eliminarFin();
+        columnas[destinoCol].insertarFin(carta);
         verificarVictoria();
         return true;
-    }
-
-    // Método auxiliar para eliminar una carta específica de una columna
-    private void eliminarCartaEspecifica(int columna, Carta carta) {
-        if (columnas[columna].estaVacia()) return;
-
-        // Si es la última carta, usar eliminarFin
-        if (columnas[columna].obtenerFin().equals(carta)) {
-            columnas[columna].eliminarFin();
-            return;
-        }
-
-        // Buscar y eliminar la carta específica usando el método eliminaX de la lista
-        Carta eliminada = columnas[columna].eliminaX(carta);
-        if (eliminada == null) {
-            // Si eliminaX no funciona, usar búsqueda manual
-            eliminarCartaManual(columna, carta);
-        }
-    }
-
-    // Método de respaldo para eliminar carta manualmente
-    private void eliminarCartaManual(int columna, Carta carta) {
-        NodoDoble<Carta> actual = columnas[columna].getInicio();
-        do {
-            if (actual.getDato().equals(carta)) {
-                // Reconstruir la lista sin esta carta
-                ListaDobleCircular<Carta> nuevaLista = new ListaDobleCircular<>();
-                NodoDoble<Carta> temp = columnas[columna].getInicio();
-
-                do {
-                    if (!temp.getDato().equals(carta)) {
-                        nuevaLista.insertarFin(temp.getDato());
-                    }
-                    temp = temp.getSig();
-                } while (temp != columnas[columna].getInicio());
-
-                columnas[columna] = nuevaLista;
-                return;
-            }
-            actual = actual.getSig();
-        } while (actual != columnas[columna].getInicio());
     }
 
     public boolean moverAReserva(int columna) {
